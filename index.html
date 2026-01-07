@@ -7,7 +7,7 @@
 body {
   font-family: Arial, sans-serif;
   text-align: center;
-  margin-top: 30px;
+  margin-top: 20px;
 }
 .roulette-container {
   position: relative;
@@ -16,11 +16,11 @@ body {
 .pointer {
   width: 0;
   height: 0;
-  border-left: 15px solid transparent;
-  border-right: 15px solid transparent;
-  border-bottom: 30px solid red;
+  border-left: 14px solid transparent;
+  border-right: 14px solid transparent;
+  border-bottom: 28px solid red;
   position: absolute;
-  top: -30px;
+  top: -28px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 10;
@@ -39,8 +39,17 @@ body {
   top: 50%;
   transform-origin: 0 0;
   font-weight: bold;
-  color: white;
+  color: #fff;
+  text-shadow: 1px 1px 2px #000;
   pointer-events: none;
+}
+button {
+  margin: 5px;
+  padding: 8px 14px;
+}
+.items input {
+  width: 90px;
+  margin: 3px;
 }
 </style>
 </head>
@@ -53,8 +62,13 @@ body {
   <div class="roulette" id="roulette"></div>
 </div>
 
-<br><br>
+<br>
 <button id="spinBtn">돌리기</button>
+<br>
+<button onclick="changeItems(1)">+ 항목</button>
+<button onclick="changeItems(-1)">- 항목</button>
+
+<div class="items" id="items"></div>
 
 <script>
 let items = ["항목 1", "항목 2"];
@@ -62,13 +76,17 @@ let angle = 0;
 let spinning = false;
 let forcedIndex = null;
 
-const colors = ["#f44336","#ff9800","#4caf50","#2196f3"];
+const colors = [
+  "#f44336","#ff9800","#ffeb3b",
+  "#4caf50","#2196f3","#9c27b0",
+  "#00bcd4","#8bc34a","#ffc107"
+];
 
 function draw() {
   const r = document.getElementById("roulette");
   const step = 360 / items.length;
-
   r.innerHTML = "";
+
   r.style.background =
     "conic-gradient(" +
     items.map((_,i)=>`${colors[i%colors.length]} ${i*step}deg ${(i+1)*step}deg`).join(",")
@@ -76,11 +94,25 @@ function draw() {
 
   items.forEach((t,i)=>{
     const d = document.createElement("div");
-    d.className="segment-text";
+    d.className = "segment-text";
     const a = i*step + step/2;
-    d.style.transform = `rotate(${a}deg) translate(90px) rotate(${-a}deg)`;
+    d.style.transform =
+      `rotate(${a}deg) translate(90px) rotate(${-a}deg)`;
     d.innerText = t;
     r.appendChild(d);
+  });
+
+  drawInputs();
+}
+
+function drawInputs() {
+  const c = document.getElementById("items");
+  c.innerHTML = "";
+  items.forEach((v,i)=>{
+    const input = document.createElement("input");
+    input.value = v;
+    input.oninput = ()=>{ items[i]=input.value; draw(); };
+    c.appendChild(input);
   });
 }
 
@@ -90,20 +122,17 @@ function getResultIndex() {
   return Math.floor(a / step);
 }
 
-document.getElementById("spinBtn").onclick = () => {
+document.getElementById("spinBtn").onclick = ()=>{
   if (spinning) return;
   spinning = true;
 
   const step = 360 / items.length;
-  const spins = Math.floor(Math.random()*3)+3;
+  const spins = Math.floor(Math.random()*3) + 3;
 
-  let targetIndex =
+  const targetIndex =
     forcedIndex !== null ? forcedIndex : Math.floor(Math.random()*items.length);
 
-  const targetAngle =
-    spins*360 + targetIndex*step + step/2;
-
-  angle += targetAngle;
+  angle += spins*360 + targetIndex*step + step/2;
   document.getElementById("roulette").style.transform =
     `rotate(${angle}deg)`;
 
@@ -115,11 +144,19 @@ document.getElementById("spinBtn").onclick = () => {
   },4000);
 };
 
-// 치트: 숫자 누르면 다음 판 고정
+// 치트: 1~9 누르면 다음 판 고정
 document.addEventListener("keydown",e=>{
   const n = parseInt(e.key);
-  if (n>=1 && n<=items.length) forcedIndex=n-1;
+  if (n>=1 && n<=items.length) forcedIndex = n-1;
 });
+
+function changeItems(diff){
+  const n = items.length + diff;
+  if (n < 1) return;
+  if (diff > 0) items.push(`항목 ${n}`);
+  else items.pop();
+  draw();
+}
 
 draw();
 </script>
