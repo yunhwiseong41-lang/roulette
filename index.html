@@ -6,50 +6,63 @@
 <style>
 body {
   font-family: Arial, sans-serif;
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   margin-top: 20px;
 }
+
 .roulette-container {
   position: relative;
-  display: inline-block;
+  margin-bottom: 15px;
 }
+
 .pointer {
   width: 0;
   height: 0;
   border-left: 14px solid transparent;
   border-right: 14px solid transparent;
-  border-bottom: 28px solid red;
+  border-top: 26px solid red;
   position: absolute;
-  top: -28px;
+  top: -26px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 10;
 }
+
 .roulette {
   width: 300px;
   height: 300px;
   border-radius: 50%;
-  border: 5px solid #333;
-  transition: transform 4s cubic-bezier(.17,.67,.1,.99);
-  position: relative;
+  border: 4px solid #333;
+  transition: transform 4s cubic-bezier(0.17, 0.67, 0.1, 0.99);
 }
+
 .segment-text {
   position: absolute;
   left: 50%;
   top: 50%;
-  transform-origin: 0 0;
+  width: 120px;
+  margin-left: -60px;
+  text-align: center;
   font-weight: bold;
-  color: #fff;
-  text-shadow: 1px 1px 2px #000;
+  color: white;
+  text-shadow: 1px 1px 2px black;
   pointer-events: none;
 }
-button {
-  margin: 5px;
-  padding: 8px 14px;
+
+.controls {
+  margin-top: 10px;
 }
-.items input {
-  width: 90px;
+
+.controls button {
   margin: 3px;
+  padding: 6px 14px;
+}
+
+.items input {
+  width: 120px;
+  margin: 2px;
 }
 </style>
 </head>
@@ -62,101 +75,129 @@ button {
   <div class="roulette" id="roulette"></div>
 </div>
 
-<br>
 <button id="spinBtn">돌리기</button>
-<br>
-<button onclick="changeItems(1)">+ 항목</button>
-<button onclick="changeItems(-1)">- 항목</button>
+
+<div class="controls">
+  <button onclick="addItem()">+ 항목</button>
+  <button onclick="removeItem()">- 항목</button>
+</div>
 
 <div class="items" id="items"></div>
 
 <script>
-let items = ["항목 1", "항목 2"];
-let angle = 0;
+const roulette = document.getElementById("roulette");
+const spinBtn = document.getElementById("spinBtn");
+const itemsBox = document.getElementById("items");
+
+let items = [
+  { name: "항목 1", color: "#f44336" },
+  { name: "항목 2", color: "#2196f3" }
+];
+
+let currentRotation = 0;
 let spinning = false;
 let forcedIndex = null;
 
 const colors = [
-  "#f44336","#ff9800","#ffeb3b",
-  "#4caf50","#2196f3","#9c27b0",
-  "#00bcd4","#8bc34a","#ffc107"
+  "#f44336", "#2196f3", "#4caf50",
+  "#ff9800", "#9c27b0", "#00bcd4"
 ];
 
 function draw() {
-  const r = document.getElementById("roulette");
   const step = 360 / items.length;
-  r.innerHTML = "";
+  let gradient = "";
 
-  r.style.background =
-    "conic-gradient(" +
-    items.map((_,i)=>`${colors[i%colors.length]} ${i*step}deg ${(i+1)*step}deg`).join(",")
-    + ")";
+  roulette.innerHTML = "";
 
-  items.forEach((t,i)=>{
-    const d = document.createElement("div");
-    d.className = "segment-text";
-    const a = i*step + step/2;
-    d.style.transform =
-      `rotate(${a}deg) translate(90px) rotate(${-a}deg)`;
-    d.innerText = t;
-    r.appendChild(d);
+  items.forEach((item, i) => {
+    gradient += `${item.color} ${i*step}deg ${(i+1)*step}deg,`;
+  });
+
+  roulette.style.background =
+    `conic-gradient(${gradient.slice(0, -1)})`;
+
+  items.forEach((item, i) => {
+    const text = document.createElement("div");
+    text.className = "segment-text";
+    text.innerText = item.name;
+
+    const deg = i * step + step / 2;
+    text.style.transform =
+      `rotate(${deg}deg) translate(0,-110px) rotate(${-deg}deg)`;
+
+    roulette.appendChild(text);
   });
 
   drawInputs();
 }
 
 function drawInputs() {
-  const c = document.getElementById("items");
-  c.innerHTML = "";
-  items.forEach((v,i)=>{
+  itemsBox.innerHTML = "";
+  items.forEach((item, i) => {
     const input = document.createElement("input");
-    input.value = v;
-    input.oninput = ()=>{ items[i]=input.value; draw(); };
-    c.appendChild(input);
+    input.value = item.name;
+    input.oninput = () => {
+      items[i].name = input.value;
+      draw();
+    };
+    itemsBox.appendChild(input);
   });
 }
 
-function getResultIndex() {
-  const step = 360 / items.length;
-  let a = (360 - (angle % 360) + step/2) % 360;
-  return Math.floor(a / step);
-}
-
-document.getElementById("spinBtn").onclick = ()=>{
+function addItem() {
   if (spinning) return;
-  spinning = true;
-
-  const step = 360 / items.length;
-  const spins = Math.floor(Math.random()*3) + 3;
-
-  const targetIndex =
-    forcedIndex !== null ? forcedIndex : Math.floor(Math.random()*items.length);
-
-  angle += spins*360 + targetIndex*step + step/2;
-  document.getElementById("roulette").style.transform =
-    `rotate(${angle}deg)`;
-
-  setTimeout(()=>{
-    const result = getResultIndex();
-    alert("결과: " + items[result]);
-    forcedIndex = null;
-    spinning = false;
-  },4000);
-};
-
-// 치트: 1~9 누르면 다음 판 고정
-document.addEventListener("keydown",e=>{
-  const n = parseInt(e.key);
-  if (n>=1 && n<=items.length) forcedIndex = n-1;
-});
-
-function changeItems(diff){
-  const n = items.length + diff;
-  if (n < 1) return;
-  if (diff > 0) items.push(`항목 ${n}`);
-  else items.pop();
+  items.push({
+    name: `항목 ${items.length+1}`,
+    color: colors[items.length % colors.length]
+  });
   draw();
 }
+
+function removeItem() {
+  if (spinning) return;
+  if (items.length <= 1) return;
+  items.pop();
+  draw();
+}
+
+document.addEventListener("keydown", e => {
+  const n = parseInt(e.key);
+  if (n >= 1 && n <= items.length) {
+    forcedIndex = n - 1;
+  }
+});
+
+spinBtn.onclick = () => {
+  if (spinning) return;
+  spinning = true;
+  spinBtn.disabled = true;
+
+  const count = items.length;
+  const sector = 360 / count;
+  const spins = Math.floor(Math.random() * 3) + 3;
+
+  const resultIndex =
+    forcedIndex !== null
+      ? forcedIndex
+      : Math.floor(Math.random() * count);
+
+  const targetAngle =
+    360 - (resultIndex * sector + sector / 2);
+
+  // ✅ 핵심 수정: 누적각 정규화 후 재설정
+  const baseRotation = currentRotation % 360;
+  currentRotation =
+    currentRotation - baseRotation + spins * 360 + targetAngle;
+
+  roulette.style.transform = `rotate(${currentRotation}deg)`;
+
+  setTimeout(() => {
+    alert("결과: " + items[resultIndex].name);
+    spinning = false;
+    spinBtn.disabled = false;
+    forcedIndex = null;
+  }, 4000);
+};
 
 draw();
 </script>
