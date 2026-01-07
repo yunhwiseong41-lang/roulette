@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>룰렛</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.roulette-container {
+  position: relative;
+  margin-bottom: 15px;
+}
+
+.pointer {
+  width: 0;
+  height: 0;
+  border-left: 14px solid transparent;
+  border-right: 14px solid transparent;
+  border-top: 26px solid red;
+  position: absolute;
+  top: -26px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+}
+
+.roulette {
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  border: 4px solid #333;
+  transition: transform 4s cubic-bezier(0.17, 0.67, 0.1, 0.99);
+}
+
+.segment-text {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 120px;
+  margin-left: -60px;
+  text-align: center;
+  font-weight: bold;
+  color: white;
+  text-shadow: 1px 1px 2px black;
+  pointer-events: none;
+}
+
+.controls {
+  margin-top: 10px;
+}
+
+.controls button {
+  margin: 3px;
+  padding: 6px 14px;
+}
+
+.items input {
+  width: 120px;
+  margin: 2px;
+}
+</style>
+</head>
+<body>
+
+<h2>룰렛</h2>
+
+<div class="roulette-container">
+  <div class="pointer"></div>
+  <div class="roulette" id="roulette"></div>
+</div>
+
+<button id="spinBtn">돌리기</button>
+
+<div class="controls">
+  <button onclick="addItem()">+ 항목</button>
+  <button onclick="removeItem()">- 항목</button>
+</div>
+
+<div class="items" id="items"></div>
+
+<script>
+const roulette = document.getElementById("roulette");
+const spinBtn = document.getElementById("spinBtn");
+const itemsBox = document.getElementById("items");
+
+let items = [
+  { name: "항목 1", color: "#f44336" },
+  { name: "항목 2", color: "#2196f3" }
+];
+
+let currentRotation = 0;
+let spinning = false;
+let forcedIndex = null;
+
+const colors = [
+  "#f44336", "#2196f3", "#4caf50",
+  "#ff9800", "#9c27b0", "#00bcd4"
+];
+
+function draw() {
+  const step = 360 / items.length;
+  let gradient = "";
+
+  roulette.innerHTML = "";
+
+  items.forEach((item, i) => {
+    gradient += `${item.color} ${i*step}deg ${(i+1)*step}deg,`;
+  });
+
+  roulette.style.background =
+    `conic-gradient(${gradient.slice(0, -1)})`;
+
+  items.forEach((item, i) => {
+    const text = document.createElement("div");
+    text.className = "segment-text";
+    text.innerText = item.name;
+
+    const deg = i * step + step / 2;
+    text.style.transform =
+      `rotate(${deg}deg) translate(0,-110px) rotate(${-deg}deg)`;
+
+    roulette.appendChild(text);
+  });
+
+  drawInputs();
+}
+
+function drawInputs() {
+  itemsBox.innerHTML = "";
+  items.forEach((item, i) => {
+    const input = document.createElement("input");
+    input.value = item.name;
+    input.oninput = () => {
+      items[i].name = input.value;
+      draw();
+    };
+    itemsBox.appendChild(input);
+  });
+}
+
+function addItem() {
+  if (spinning) return;
+  items.push({
+    name: `항목 ${items.length+1}`,
+    color: colors[items.length % colors.length]
+  });
+  draw();
+}
+
+function removeItem() {
+  if (spinning) return;
+  if (items.length <= 1) return;
+  items.pop();
+  draw();
+}
+
+/* 치트: 숫자 1~9 */
+document.addEventListener("keydown", e => {
+  const n = parseInt(e.key);
+  if (n >= 1 && n <= items.length) {
+    forcedIndex = n - 1;
+  }
+});
+
+/* 🔥 핵심 스핀 로직 */
+spinBtn.onclick = () => {
+  if (spinning) return;
+  spinning = true;
+  spinBtn.disabled = true;
+
+  const count = items.length;
+  const sector = 360 / count;
+  const spins = Math.floor(Math.random() * 3) + 3;
+
+  // 🎯 결과 인덱스 먼저 확정
+  const resultIndex =
+    forcedIndex !== null
+      ? forcedIndex
+      : Math.floor(Math.random() * count);
+
+  // 🎯 해당 항목 중앙을 화살표(위)에 맞춤
+  const targetAngle =
+    360 - (resultIndex * sector + sector / 2);
+
+  currentRotation += spins * 360 + targetAngle;
+  roulette.style.transform = `rotate(${currentRotation}deg)`;
+
+  setTimeout(() => {
+    alert("결과: " + items[resultIndex].name);
+    spinning = false;
+    spinBtn.disabled = false;
+    forcedIndex = null;
+  }, 4000);
+};
+
+draw();
+</script>
+</body>
+</html>
